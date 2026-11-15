@@ -1,0 +1,35 @@
+{
+  "results": [
+    {
+      "Model": "Baseline (Mean)",
+      "MAE": 32.4101,
+      "RMSE": 41.3752,
+      "R2": -0.0
+    },
+    {
+      "Model": "Linear Regression",
+      "MAE": 26.6646,
+      "RMSE": 34.7915,
+      "R2": 0.2929
+    },
+    {
+      "Model": "Decision Tree",
+      "MAE": 9.5053,
+      "RMSE": 13.4423,
+      "R2": 0.8944
+    },
+    {
+      "Model": "Random Forest",
+      "MAE": 9.3044,
+      "RMSE": 13.1996,
+      "R2": 0.8982
+    },
+    {
+      "Model": "Gradient Boosting",
+      "MAE": 8.9285,
+      "RMSE": 12.6831,
+      "R2": 0.906
+    }
+  ],
+  "best_model": "Gradient Boosting"
+}
