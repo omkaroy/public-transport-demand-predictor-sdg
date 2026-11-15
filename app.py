@@ -110,35 +110,34 @@ div[data-testid="metric-container"] label { color: #37474f; font-weight: 600; }
 #  CACHED RESOURCE LOADERS
 # ══════════════════════════════════════════════════════════════════════
 @st.cache_resource
-def load_model():
-    path = os.path.join(MODEL_DIR, "best_model.pkl")
-    if not os.path.exists(path):
-        return None
-    return joblib.load(path)
-
-
 @st.cache_resource
-def load_encoders():
-    path = os.path.join(MODEL_DIR, "label_encoders.pkl")
-    if not os.path.exists(path):
-        return None
-    return joblib.load(path)
+def load_model():
+    # 1. Cloud-native training (100% immune to cross-platform pickle / OS mismatches)
+    csv_path = os.path.join(DATA_DIR, "processed_data.csv")
+    cols_path = os.path.join(MODEL_DIR, "feature_cols.json")
+    if os.path.exists(csv_path) and os.path.exists(cols_path):
+        try:
+            from sklearn.ensemble import HistGradientBoostingRegressor
+            with open(cols_path, "r") as f:
+                fcols = json.load(f)
+            df = pd.read_csv(csv_path)
+            X = df[fcols]
+            y = df["Passenger_Count"]
+            m = HistGradientBoostingRegressor(max_iter=100, random_state=42)
+            m.fit(X, y)
+            return m
+        except Exception:
+            pass
 
+    # 2. Fallback to pre-trained pickle
+    path = os.path.join(MODEL_DIR, "best_model.pkl")
+    if os.path.exists(path):
+        try:
+            return joblib.load(path)
+        except Exception:
+            pass
 
-@st.cache_data
-def load_metrics():
-    path = os.path.join(MODEL_DIR, "model_metrics.json")
-    if not os.path.exists(path):
-        return None
-    with open(path) as f:
-        return json.load(f)
-
-
-@st.cache_data
-def load_data():
-    path = os.path.join(DATA_DIR, "processed_data.csv")
-    if not os.path.exists(path):
-        return None
+    return None
     df = pd.read_csv(path, parse_dates=["Date"])
     return df
 
