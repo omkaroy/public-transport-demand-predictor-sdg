@@ -110,7 +110,6 @@ div[data-testid="metric-container"] label { color: #37474f; font-weight: 600; }
 #  CACHED RESOURCE LOADERS
 # ══════════════════════════════════════════════════════════════════════
 @st.cache_resource
-@st.cache_resource
 def load_model():
     # 1. Cloud-native training (100% immune to cross-platform pickle / OS mismatches)
     csv_path = os.path.join(DATA_DIR, "processed_data.csv")
@@ -138,6 +137,45 @@ def load_model():
             pass
 
     return None
+
+
+@st.cache_resource
+def load_encoders():
+    path = os.path.join(MODEL_DIR, "label_encoders.pkl")
+    if os.path.exists(path):
+        try:
+            return joblib.load(path)
+        except Exception:
+            pass  # Fall back to default fitted encoders
+
+    # Fallback default LabelEncoders
+    from sklearn.preprocessing import LabelEncoder
+    encs = {}
+    for col, classes in [
+        ("Route_ID", ["R01", "R02", "R03", "R04", "R05"]),
+        ("Day_of_Week", ["Friday", "Monday", "Saturday", "Sunday", "Thursday", "Tuesday", "Wednesday"]),
+        ("Weather", ["Clear", "Cloudy", "Foggy", "Rainy"])
+    ]:
+        le = LabelEncoder()
+        le.fit(classes)
+        encs[col] = le
+    return encs
+
+
+@st.cache_data
+def load_metrics():
+    path = os.path.join(MODEL_DIR, "model_metrics.json")
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        return json.load(f)
+
+
+@st.cache_data
+def load_data():
+    path = os.path.join(DATA_DIR, "processed_data.csv")
+    if not os.path.exists(path):
+        return None
     df = pd.read_csv(path, parse_dates=["Date"])
     return df
 
@@ -162,7 +200,6 @@ def load_feature_cols():
 # ══════════════════════════════════════════════════════════════════════
 #  UTILITY FUNCTIONS
 # ══════════════════════════════════════════════════════════════════════
-# ── Thresholds (configurable via sidebar) ────────────────────────────
 DEFAULT_THRESHOLDS = {"low": 60, "moderate": 110, "high": 160, "bus_cap": 60}
 
 def classify_demand(count: float, thresholds: dict) -> tuple[str, str]:
@@ -198,7 +235,7 @@ def build_feature_row(route, hour, day_name, is_weekend, temperature,
     month_cos = np.cos(2 * np.pi * month / 12)
 
     quarter     = (month - 1) // 3 + 1
-    week_of_year = datetime.now().isocalendar()[1]   # approximate
+    week_of_year = datetime.now().isocalendar()[1]
 
     row = {
         "Route_ID"   : encode_input(route,    encoders["Route_ID"]),
@@ -592,11 +629,11 @@ elif "Analytics" in page:
         route_avg.columns = ["Route", "Mean", "Std", "Max"]
 
         fig = px.bar(route_avg, x="Route", y="Mean",
-                     error_y="Std",
-                     color="Mean",
-                     color_continuous_scale=["#a5d6a7","#1b5e20"],
-                     labels={"Mean": "Avg Passengers"},
-                     title="Route-wise Average Demand")
+                      error_y="Std",
+                      color="Mean",
+                      color_continuous_scale=["#a5d6a7","#1b5e20"],
+                      labels={"Mean": "Avg Passengers"},
+                      title="Route-wise Average Demand")
         fig.update_coloraxes(showscale=False)
         st.plotly_chart(plotly_theme(fig), use_container_width=True)
 
@@ -726,9 +763,9 @@ these disproportionately.
 
     with col2:
         fig2 = px.bar(df_m, x="Model", y="R2",
-                      color="R2",
-                      color_continuous_scale=["#f44336","#1b5e20"],
-                      title="R² Score by Model (higher = better)")
+                       color="R2",
+                       color_continuous_scale=["#f44336","#1b5e20"],
+                       title="R² Score by Model (higher = better)")
         fig2.update_coloraxes(showscale=False)
         st.plotly_chart(plotly_theme(fig2), use_container_width=True)
 
